@@ -294,3 +294,32 @@ class TestOperationFactory:
 
         with pytest.raises(TypeError, match="Operation class must inherit"):
             OperationFactory.register_operation("invalid", InvalidOperation)
+
+def test_additional_operations():
+    test_cases = [
+        ("mod", "10", "3", "1"),
+        ("intdivide", "10", "3", "3"),
+        ("percentage", "25", "100", "25"),
+        ("absdiff", "3", "10", "7"),
+        ("absdiff", "10", "3", "7"),
+    ]
+
+    for operation, a, b, expected in test_cases:
+        instance = OperationFactory.create_operation(operation)
+
+        result = instance.execute(Decimal(a), Decimal(b))
+
+        assert result == Decimal(expected)
+        
+def test_additional_operations_zero_divisor():
+    test_cases = [
+        ("mod", "Divisor cannot be zero"),
+        ("intdivide", "Divisor cannot be zero"),
+        ("percentage", "Base value cannot be zero"),
+    ]
+
+    for operation, expected_message in test_cases:
+        instance = OperationFactory.create_operation(operation)
+
+        with pytest.raises(ValidationError, match=expected_message):
+            instance.execute(Decimal("10"), Decimal("0"))

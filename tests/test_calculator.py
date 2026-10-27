@@ -12,6 +12,7 @@ from app.calculator_config import CalculatorConfig
 from app.exceptions import OperationError, ValidationError
 from app.history import LoggingObserver, AutoSaveObserver
 from app.operations import OperationFactory
+from app.calculator_memento import CalculatorMemento
 
 # Fixture to initialize Calculator with a temporary directory for file paths
 @pytest.fixture
@@ -333,7 +334,7 @@ def test_calculator_repl_non_decimal_result(
     calculator_repl()
 
     assert_printed(mock_print, "\nResult: 5")
-    
+
 @patch('builtins.input', side_effect=['exit'])
 @patch('builtins.print')
 @patch('app.calculator_repl.Calculator.save_history', side_effect=Exception('Disk full'))
@@ -393,3 +394,24 @@ def test_repl_initialization_failure(mock_calculator, mock_logging, mock_print):
         calculator_repl()
     assert_printed(mock_print, 'Fatal error: Initialization failed')
     mock_logging.assert_called_once()
+
+def test_memento_to_dict():
+    memento = CalculatorMemento(history=[])
+
+    result = memento.to_dict()
+
+    assert result["history"] == []
+    assert result["timestamp"] == memento.timestamp.isoformat()
+
+def test_memento_from_dict():
+    timestamp = datetime.datetime.now()
+
+    data = {
+        "history": [],
+        "timestamp": timestamp.isoformat()
+    }
+
+    memento = CalculatorMemento.from_dict(data)
+
+    assert memento.history == []
+    assert memento.timestamp == timestamp

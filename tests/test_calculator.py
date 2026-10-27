@@ -322,3 +322,74 @@ def assert_printed(mock_print, expected):
     ]
 
     assert expected in printed_messages
+    
+@patch('builtins.input', side_effect=['add', '2', '3', 'exit'])
+@patch('builtins.print')
+@patch('app.calculator_repl.Calculator.perform_operation',
+       return_value=5)
+def test_calculator_repl_non_decimal_result(
+        mock_operation, mock_print, mock_input):
+
+    calculator_repl()
+
+    assert_printed(mock_print, "\nResult: 5")
+    
+@patch('builtins.input', side_effect=['exit'])
+@patch('builtins.print')
+@patch('app.calculator_repl.Calculator.save_history', side_effect=Exception('Disk full'))
+def test_repl_exit_save_failure(mock_save, mock_print, mock_input):
+    calculator_repl()
+    assert_printed(mock_print, '\nWarning: Could not save history: Disk full')
+    assert_printed(mock_print, 'Goodbye!')
+
+
+@patch('builtins.input', side_effect=['save', 'exit'])
+@patch('builtins.print')
+@patch('app.calculator_repl.Calculator.save_history')
+def test_repl_manual_save_failure(mock_save, mock_print, mock_input):
+    mock_save.side_effect = [Exception('Save failed'), None]
+    calculator_repl()
+    assert_printed(mock_print, 'Error saving history: Save failed')
+
+
+@patch('builtins.input', side_effect=['load', 'exit'])
+@patch('builtins.print')
+@patch('app.calculator_repl.Calculator.load_history', side_effect=Exception('Load failed'))
+def test_repl_load_failure(mock_load, mock_print, mock_input):
+    calculator_repl()
+    assert_printed(mock_print, 'Error loading history: Load failed')
+
+
+@pytest.mark.parametrize('inputs', [
+    ['add', 'cancel', 'exit'],
+    ['add', '2', 'cancel', 'exit'],
+])
+def test_repl_cancel_number(inputs):
+    with patch('builtins.input', side_effect=inputs), patch('builtins.print') as mock_print:
+        calculator_repl()
+    assert_printed(mock_print, 'Operation cancelled')
+
+
+@patch('builtins.input', side_effect=['add', 'invalid', '3', 'exit'])
+@patch('builtins.print')
+def test_repl_invalid_number(mock_print, mock_input):
+    calculator_repl()
+    assert any('Error: Invalid number format' in strip_ansi(str(c.args[0]))
+               for c in mock_print.call_args_list if c.args)
+
+
+@patch('builtins.input', side_effect=[Exception('Input failure'), 'exit'])
+@patch('builtins.print')
+def test_repl_command_input_failure(mock_print, mock_input):
+    calculator_repl()
+    assert_printed(mock_print, 'Error: Input failure')
+
+
+@patch('builtins.print')
+@patch('app.calculator_repl.logging.error')
+@patch('app.calculator_repl.Calculator', side_effect=Exception('Initialization failed'))
+def test_repl_initialization_failure(mock_calculator, mock_logging, mock_print):
+    with pytest.raises(Exception, match='Initialization failed'):
+        calculator_repl()
+    assert_printed(mock_print, 'Fatal error: Initialization failed')
+    mock_logging.assert_called_once()

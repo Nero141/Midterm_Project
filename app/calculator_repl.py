@@ -9,9 +9,9 @@ from app.calculator import Calculator
 from app.exceptions import OperationError, ValidationError
 from app.history import AutoSaveObserver, LoggingObserver
 from app.operations import OperationFactory
-from colorama import Fore, Style, init
+from colorama import Fore, Style, just_fix_windows_console
 
-init(autoreset=True)
+just_fix_windows_console()
 
 
 def calculator_repl():
@@ -55,7 +55,7 @@ def calculator_repl():
                         calc.save_history()
                         print("History saved successfully.")
                     except Exception as e:
-                        print(Fore.YELLOW + f"Warning: Could not save history: {e}")
+                        print(f"{Fore.YELLOW}\nWarning: Could not save history: {e}{Style.RESET_ALL}")
                     print("Goodbye!")
                     break
 
@@ -96,18 +96,18 @@ def calculator_repl():
                     # Save calculation history to file
                     try:
                         calc.save_history()
-                        print(Fore.GREEN + "History saved successfully")
+                        print(f"{Fore.GREEN}History saved successfully{Style.RESET_ALL}")
                     except Exception as e:
-                        print(Fore.RED + f"Error saving history: {e}")
+                        print(f"{Fore.RED}Error saving history: {e}{Style.RESET_ALL}")
                     continue
 
                 if command == 'load':
                     # Load calculation history from file
                     try:
                         calc.load_history()
-                        print(Fore.GREEN + "History loaded successfully")
+                        print(f"{Fore.GREEN}History loaded successfully{Style.RESET_ALL}")
                     except Exception as e:
-                        print(Fore.RED + f"Error loading history: {e}")
+                        print(f"{Fore.RED}Error loading history: {e}{Style.RESET_ALL}")
                     continue
 
                 if command in ['add', 'subtract', 'multiply', 'divide', 'power', 'root', 'mod', 'intdivide', 'percentage', 'absdiff']:
@@ -134,33 +134,33 @@ def calculator_repl():
                         if isinstance(result, Decimal):
                             result = result.normalize()
 
-                        print(Fore.GREEN + f"\nResult: {result}")
+                        print(f"{Fore.GREEN}\nResult: {result}{Style.RESET_ALL}")
                     except (ValidationError, OperationError) as e:
                         # Handle known exceptions related to validation or operation errors
-                        print(Fore.RED + f"Error: {e}")
+                        print(f"{Fore.RED}Error: {e}{Style.RESET_ALL}")
                     except Exception as e:
                         # Handle any unexpected exceptions
-                        print(Fore.RED + f"Unexpected error: {e}")
+                        print(f"{Fore.RED}Unexpected error: {e}{Style.RESET_ALL}")
                     continue
 
                 # Handle unknown commands
-                print(Fore.YELLOW + f"Unknown command: '{command}'. Type 'help' for available commands.")
+                print(f"{Fore.YELLOW}Unknown command: '{command}'. Type 'help' for available commands.{Style.RESET_ALL}")
 
             except KeyboardInterrupt:
                 # Handle Ctrl+C interruption gracefully
-                print(Fore.YELLOW + "\nOperation cancelled")
+                print(f"{Fore.YELLOW}\nOperation cancelled{Style.RESET_ALL}")
                 continue
             except EOFError:
                 # Handle end-of-file (e.g., Ctrl+D) gracefully
-                print(Fore.YELLOW + "\nInput terminated. Exiting...")
+                print(f"{Fore.YELLOW}\nInput terminated. Exiting...{Style.RESET_ALL}")
                 break
             except Exception as e:
                 # Handle any other unexpected exceptions
-                print(Fore.RED + f"Error: {e}")
+                print(f"{Fore.RED}Error: {e}{Style.RESET_ALL}")
                 continue
 
     except Exception as e:
         # Handle fatal errors during initialization
-        print(Fore.RED + f"Fatal error: {e}")
-        logging.error(Fore.RED + f"Fatal error in calculator REPL: {e}")
+        print(f"{Fore.RED}Fatal error: {e}{Style.RESET_ALL}")
+        logging.error(f"{Fore.RED}Fatal error in calculator REPL: {e}{Style.RESET_ALL}")
         raise

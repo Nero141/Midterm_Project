@@ -2,6 +2,7 @@ import datetime
 from pathlib import Path
 import pandas as pd
 import pytest
+import re
 from unittest.mock import Mock, patch, PropertyMock
 from decimal import Decimal
 from tempfile import TemporaryDirectory
@@ -177,7 +178,7 @@ def test_calculator_repl_help(mock_print, mock_input):
 @patch('builtins.print')
 def test_calculator_repl_addition(mock_print, mock_input):
     calculator_repl()
-    mock_print.assert_any_call("\nResult: 5")
+    assert_printed(mock_print, "\nResult: 5")
 
 def test_show_history(calculator):
     operation = OperationFactory.create_operation('add')
@@ -213,14 +214,14 @@ def test_load_history_no_file(mock_exists, calculator):
 def test_keyboard_exception(mock_print, mock_input):
     calculator_repl()
 
-    mock_print.assert_any_call("\nOperation cancelled")
+    assert_printed(mock_print, "\nOperation cancelled")
 
 @patch('builtins.input', side_effect=EOFError())
 @patch('builtins.print')
 def test_calculator_repl_eof_error(mock_print, mock_input):
     calculator_repl()
 
-    mock_print.assert_any_call("\nInput terminated. Exiting...")
+    assert_printed(mock_print, "\nInput terminated. Exiting...")
 
 @patch('builtins.input', side_effect=['add', '2', '3', 'exit'])
 @patch('builtins.print')
@@ -229,16 +230,14 @@ def test_calculator_repl_eof_error(mock_print, mock_input):
 def test_calculator_repl_unexpected_error(mock_operation, mock_print, mock_input):
     calculator_repl()
 
-    mock_print.assert_any_call("Unexpected error: Test error")
+    assert_printed(mock_print, "Unexpected error: Test error")
 
 @patch('builtins.input', side_effect=['blah', 'exit'])
 @patch('builtins.print')
 def test_calculator_repl_unknown_command(mock_print, mock_input):
     calculator_repl()
 
-    mock_print.assert_any_call(
-        "Unknown command: 'blah'. Type 'help' for available commands."
-    )
+    assert_printed(mock_print, "Unknown command: 'blah'. Type 'help' for available commands.")
 
 @patch('builtins.input', side_effect=['history', 'exit'])
 @patch('builtins.print')
@@ -246,50 +245,50 @@ def test_calculator_repl_unknown_command(mock_print, mock_input):
 def test_calculator_repl_empty_history(mock_history, mock_print, mock_input):
     calculator_repl()
 
-    mock_print.assert_any_call("No calculations in history")
+    assert_printed(mock_print, "No calculations in history")
 
 @patch('builtins.input', side_effect=['add', '2', '3', 'history', 'exit'])
 @patch('builtins.print')
 def test_calculator_repl_history(mock_print, mock_input):
     calculator_repl()
 
-    mock_print.assert_any_call("\nCalculation History:")
-    mock_print.assert_any_call("1. Addition(2, 3) = 5")
+    assert_printed(mock_print, "\nCalculation History:")
+    assert_printed(mock_print, "1. Addition(2, 3) = 5")
 
 @patch('builtins.input', side_effect=['clear', 'exit'])
 @patch('builtins.print')
 def test_calculator_repl_clear(mock_print, mock_input):
     calculator_repl()
 
-    mock_print.assert_any_call("History cleared")
+    assert_printed(mock_print, "History cleared")
 
 @patch('builtins.input', side_effect=['add', '2', '3', 'undo', 'exit'])
 @patch('builtins.print')
 def test_calculator_repl_undo(mock_print, mock_input):
     calculator_repl()
 
-    mock_print.assert_any_call("Operation undone")
+    assert_printed(mock_print, "Operation undone")
 
 @patch('builtins.input', side_effect=['undo', 'exit'])
 @patch('builtins.print')
 def test_calculator_repl_undo_empty(mock_print, mock_input):
     calculator_repl()
 
-    mock_print.assert_any_call("Nothing to undo")
+    assert_printed(mock_print, "Nothing to undo")
 
 @patch('builtins.input', side_effect=['add', '2', '3', 'undo', 'redo', 'exit'])
 @patch('builtins.print')
 def test_calculator_repl_redo(mock_print, mock_input):
     calculator_repl()
 
-    mock_print.assert_any_call("Operation redone")
+    assert_printed(mock_print, "Operation redone")
 
 @patch('builtins.input', side_effect=['redo', 'exit'])
 @patch('builtins.print')
 def test_calculator_repl_redo_empty(mock_print, mock_input):
     calculator_repl()
 
-    mock_print.assert_any_call("Nothing to redo")
+    assert_printed(mock_print, "Nothing to redo")
 
 @patch('builtins.input', side_effect=['save', 'exit'])
 @patch('builtins.print')
@@ -298,7 +297,7 @@ def test_calculator_repl_save(mock_save, mock_print, mock_input):
     calculator_repl()
 
     mock_save.assert_called()
-    mock_print.assert_any_call("History saved successfully")
+    assert_printed(mock_print, "History saved successfully")
 
 @patch('builtins.input', side_effect=['load', 'exit'])
 @patch('builtins.print')
@@ -307,5 +306,19 @@ def test_calculator_repl_load(mock_load, mock_print, mock_input):
     calculator_repl()
 
     mock_load.assert_called()
-    mock_print.assert_any_call("History loaded successfully")
+    assert_printed(mock_print, "History loaded successfully")
 
+def strip_ansi(text):
+    """Remove ANSI color codes from terminal output."""
+    return re.sub(r'\x1b\[[0-9;]*m', '', text)
+
+
+def assert_printed(mock_print, expected):
+    """Check printed output while ignoring color codes."""
+    printed_messages = [
+        strip_ansi(str(call.args[0]))
+        for call in mock_print.call_args_list
+        if call.args
+    ]
+
+    assert expected in printed_messages
